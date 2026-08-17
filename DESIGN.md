@@ -434,13 +434,39 @@ browser; a behavior that only misbehaves in the browser needs a manual check.
 
 ## 14. Open questions (resolve during implementation)
 
-- **Exact Agent SDK options for skill loading** — which combination of
-  settings/skill-directory configuration loads skills from an external
-  `skillsDir`, and whether a symlink into a project-local `.claude/skills/` is
-  needed. This is M0's whole job.
-- **Session continuity mechanics for the GM** — persistent streaming session
-  vs. resume-by-session-id per turn; whichever the SDK makes most reliable.
 - **Player verbosity tuning** — how much persona instruction it takes before
   transcripts read like real play; adjust after the first few runs.
 - **Per-run spend guard** — whether a token-budget abort is needed on top of
   `maxTurns`, once real usage numbers exist in `meta.json`.
+- **Child environment hygiene** (found in M0, fix in M1) — the SDK-spawned GM
+  process inherits the host Claude Code environment: the init message showed
+  the host's full tool roster and skill list visible to the GM, and the child
+  even reused the host's session id from an inherited env var. Narrative
+  continuity still worked, but a clean harness should spawn the GM with a
+  curated env. The wrinkle: auth also flows through that environment, so M1
+  needs to find the minimal env that still authenticates.
+
+### Resolved by the M0 spike (2026-08-17)
+
+- **Skill loading works, and simply.** A scratch workspace whose
+  `.claude/skills/<name>` is a *symlink* to the real synced skill, plus
+  `settingSources: ["project"]` and the SDK's first-class `skills: [name]`
+  option (which auto-enables the Skill tool). The GM invoked the skill on
+  turn 1 unprompted from the player's opening line alone — so every run also
+  exercises the skill description's triggering.
+- **Session continuity: one `query()` per turn with `resume: sessionId`.**
+  Turn 2 continued turn 1's story coherently (honored a labeled choice,
+  carried NPCs and stat changes forward).
+- **Permissions: `permissionMode: "dontAsk"`, not `bypassPermissions`** —
+  the CLI refuses bypass when running as root (which cloud containers do),
+  and dontAsk is the better policy anyway: allowlisted tools pass, everything
+  else is denied instead of prompting.
+- **Fool's Errand spec held for two turns**: exact stat line present in both
+  GM replies, zero forbidden tool calls.
+- **Cost shape**: ~$0.33 for turn 1 (skill load + opening scene) and ~$0.05
+  for turn 2, on an Opus-class GM — so a 20-turn run lands under ~$2, in line
+  with §11's estimate.
+- **Message stream contains ignorable extras** (`stream_event`,
+  `system:thinking_tokens`, `rate_limit_event`, `system:post_turn_summary`);
+  the orchestrator consumes `system:init`, `assistant`, and `result` and
+  skips the rest.
