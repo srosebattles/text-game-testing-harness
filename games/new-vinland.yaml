@@ -1,0 +1,16 @@
+name: new-vinland
+skill: new-vinland
+resume: save-block
+defaultOpening: "I'd like to play New Vinland — the cartographer scenario."
+saveBlock:
+  header: "=== NEW VINLAND SAVE STATE ==="
+  footer: "=== END SAVE STATE ==="
+  fields: [Scenario, Act, "Day & season", Location, Character, Stats, Money,
+           Inventory, Relationships, "Pre-committed decisions",
+           "Scenario state", "Key decisions", "Open threads"]
+checks:
+  - skill-invoked
+  - no-tools-during-play
+  - save-block-format
+  - player-leakage
+  - turn-length

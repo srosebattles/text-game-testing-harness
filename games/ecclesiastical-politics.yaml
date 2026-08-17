@@ -1,0 +1,17 @@
+name: ecclesiastical-politics
+skill: ecclesiastical-politics
+resume: save-block
+defaultOpening: "I'd like to play the church politics game — the cathedral chapter election."
+saveBlock:
+  header: "=== ECCLESIASTICAL POLITICS — SAVE STATE ==="
+  footer: "=== END SAVE STATE ==="
+  fields: [Scenario, "In-game date", Player, Stats, "Pre-committed decisions",
+           "Private commitments", Factions, Ledger, "Key NPCs",
+           "Possessions & documents", "Pending threads",
+           "Divergences from canon", "Recent events"]
+checks:
+  - skill-invoked
+  - no-tools-during-play
+  - save-block-format
+  - player-leakage
+  - turn-length

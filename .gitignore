@@ -1,4 +1,5 @@
 node_modules/
 runs/
 spike/workspace/
+spike/workspace-home/
 *.log
