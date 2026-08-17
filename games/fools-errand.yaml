@@ -1,0 +1,10 @@
+name: fools-errand
+skill: fools-errand
+resume: refuses            # the one game that must decline to resume old sessions
+defaultOpening: "I'd like to play A Fool's Errand."
+checks:
+  - skill-invoked
+  - no-tools-during-play
+  - stat-line-every-turn   # **Gold:** X | **Dignity:** X | **Cheese:** X
+  - player-leakage
+  - turn-length

@@ -1,0 +1,6 @@
+# Smoke test: shortest useful run — does the loop hold together end to end?
+game: fools-errand
+persona: cooperative-newbie
+maxTurns: 5
+gmModel: claude-opus-5            # match the model the games are played with
+playerModel: claude-haiku-4-5-20251001  # smoke tests take the cheapest player

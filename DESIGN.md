@@ -102,7 +102,10 @@ Two different Anthropic libraries, on purpose:
 - **Player → plain Messages API** (`@anthropic-ai/sdk`): a bare conversation
   loop with a persona system prompt. No tools, no harness — deliberately the
   simplest thing that works, and a useful contrast for learning what the Agent
-  SDK adds.
+  SDK adds. (Where no raw API key exists — Claude Code cloud containers
+  authenticate only through the Claude Code path — the player auto-falls back
+  to a tool-less Agent SDK transport behind the same interface; see the M1
+  notes in §14.)
 
 ---
 
@@ -366,6 +369,12 @@ a harness artifact for a game bug (or vice versa):
 - **Skill triggering is approximated.** The Agent SDK's skill loading is
   mechanically similar but not guaranteed byte-identical to claude.ai's.
   `skill-invoked` verifies the outcome we care about.
+- **The GM sees CLI-bundled skills.** The Claude Code CLI ships built-in
+  skills (`deep-research`, `dataviz`, …) that appear in the GM's roster
+  alongside the game skill regardless of environment (confirmed by the M1 env
+  probe — they persist even with a scratch `HOME`). This mirrors claude.ai,
+  which also surrounds the game skill with unrelated ones, so it's fidelity,
+  not contamination.
 
 A behavior confirmed broken in the harness is near-certainly broken in the
 browser; a behavior that only misbehaves in the browser needs a manual check.
@@ -394,10 +403,10 @@ browser; a behavior that only misbehaves in the browser needs a manual check.
 
 ## 12. Milestones
 
-- **M0 — Spike.** Repo scaffold + a throwaway script proving the Agent SDK can
-  load one game skill and complete two GM turns. Retires the only real
+- **M0 — Spike.** ✅ Repo scaffold + a throwaway script proving the Agent SDK
+  can load one game skill and complete two GM turns. Retires the only real
   technical risk (exact skill-loading mechanics) before any structure is built.
-- **M1 — The loop.** Orchestrator, GM/player wrappers, personas, test-case
+- **M1 — The loop.** ✅ Orchestrator, GM/player wrappers, personas, test-case
   configs, live console output, full run artifacts. *Usable from here:* run a
   session, read the transcript.
 - **M2 — Checks.** Game adapters, the tier-1 check registry, `checks.json` +
@@ -438,13 +447,6 @@ browser; a behavior that only misbehaves in the browser needs a manual check.
   transcripts read like real play; adjust after the first few runs.
 - **Per-run spend guard** — whether a token-budget abort is needed on top of
   `maxTurns`, once real usage numbers exist in `meta.json`.
-- **Child environment hygiene** (found in M0, fix in M1) — the SDK-spawned GM
-  process inherits the host Claude Code environment: the init message showed
-  the host's full tool roster and skill list visible to the GM, and the child
-  even reused the host's session id from an inherited env var. Narrative
-  continuity still worked, but a clean harness should spawn the GM with a
-  curated env. The wrinkle: auth also flows through that environment, so M1
-  needs to find the minimal env that still authenticates.
 
 ### Resolved by the M0 spike (2026-08-17)
 
@@ -470,3 +472,36 @@ browser; a behavior that only misbehaves in the browser needs a manual check.
   `system:thinking_tokens`, `rate_limit_event`, `system:post_turn_summary`);
   the orchestrator consumes `system:init`, `assistant`, and `result` and
   skips the rest.
+
+### Resolved by M1 (2026-08-17)
+
+- **Child environment hygiene** (the M0 finding) — the SDK's `Options.env`
+  REPLACES the subprocess environment (no merging), so `childEnv()` in
+  `src/gm.ts` is an explicit allowlist: process basics (`PATH`, `HOME`, …),
+  TLS/proxy plumbing (`HTTPS_PROXY`, `NO_PROXY`, cert vars), and `ANTHROPIC_*`
+  — never anything matching `CLAUDE*`, which is host-session state. Verified
+  by `spike/env-probe.ts` (kept as a reusable diagnostic): the child then gets
+  a fresh session id and loses the ~12 host-injected tools (38 → 26 in the
+  probe), while still authenticating. Bisecting further showed auth in cloud
+  containers is ambient (the CLI reads an on-disk host token at a well-known
+  path; no env var carries it), so the allowlist is kept category-shaped
+  rather than minimal — each category serves a stated purpose on some machine
+  (`HOME` → laptop OAuth credentials, `ANTHROPIC_API_KEY` → laptop/CI keys),
+  and minimal-but-fragile would break the moment auth moves.
+- **Player transport fallback** — raw Messages API calls cannot authenticate
+  in Claude Code cloud containers (no key exists, and in-transit credential
+  injection was disproven by `spike/player-auth-probe.ts`: unauthenticated
+  requests reach the API and 401). The Claude Code OAuth token on disk is for
+  the Claude Code path, not for raw API calls — borrowing it would be a
+  credential hack. Resolution: `player.ts` hides two transports behind the
+  one `GameAgent` interface — `messages-api` (the design default, used
+  whenever `ANTHROPIC_API_KEY` is set) and `agent-sdk` (tool-less SDK session,
+  persona as custom system prompt, used in cloud containers).
+  `playerTransport: auto` in the test config picks by key presence.
+- **A spawn lesson for free**: a nonexistent `cwd` makes the SDK's subprocess
+  spawn fail with an ENOENT that the SDK misreports as a broken native
+  binary. Agent workspaces are created before use; don't trust the error
+  message's own diagnosis of ENOENT.
+- **M1 smoke run** (`fools-errand`, 5 turns, Opus GM + Haiku player on the
+  agent-sdk transport): skill invoked on turn 1, stat line in all 5 GM
+  replies, zero tools during play, $0.30 total — in line with §11.
