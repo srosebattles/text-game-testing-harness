@@ -12,11 +12,13 @@
  */
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SKILL_NAME = "fools-errand";
-const SKILLS_SOURCE = process.env.SKILLS_DIR ?? "/root/.claude/skills/synced";
+const SKILLS_SOURCE =
+  process.env.SKILLS_DIR ?? path.join(os.homedir(), ".claude", "skills", "synced");
 const MODEL = "claude-haiku-4-5-20251001"; // cheapest thing that can say OK
 
 const here = path.dirname(fileURLToPath(import.meta.url));

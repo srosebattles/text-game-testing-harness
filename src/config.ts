@@ -4,6 +4,7 @@
  * as weird agent behavior twenty paid turns later.
  */
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
@@ -61,7 +62,10 @@ export function loadTestCase(testPath: string): ResolvedConfig {
   }
   const personaText = fs.readFileSync(personaPath, "utf8");
 
-  const skillsDir = process.env.SKILLS_DIR ?? "/root/.claude/skills/synced";
+  // Default to the current user's synced skills. Resolved from homedir rather
+  // than hardcoded so the same default works on a laptop and in a container.
+  const skillsDir =
+    process.env.SKILLS_DIR ?? path.join(os.homedir(), ".claude", "skills", "synced");
   const skillPath = path.join(skillsDir, game.skill);
   if (!fs.existsSync(path.join(skillPath, "SKILL.md"))) {
     throw new Error(
