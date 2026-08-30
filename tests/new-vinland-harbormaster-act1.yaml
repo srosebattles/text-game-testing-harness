@@ -1,0 +1,13 @@
+# Play through Act 1 of the Harbormaster of Thorskavik: the taking of the town
+# (Days 1-3) and out into the routine of occupation, ending on a save block.
+#
+# Requires SKILLS_DIR to point at the directory containing the new-vinland
+# skill. Act 1 is five fixed beats plus character creation and exploration,
+# so the turn budget is much larger than a smoke test's.
+game: new-vinland
+persona: act1-playthrough
+maxTurns: 40
+gmModel: claude-opus-5    # match the model the games are played with
+playerModel: claude-sonnet-5
+# Overrides the game adapter's default opening, which names the other scenario.
+opening: "I'd like to play New Vinland — the harbormaster scenario."
